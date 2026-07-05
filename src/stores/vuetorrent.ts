@@ -13,6 +13,7 @@ import {
   propsMetadata,
   ThemeMode,
   TitleOptions,
+  TorrentDetailTab,
   TorrentProperty,
 } from '@/constants/vuetorrent'
 import { DarkLegacy, LightLegacy } from '@/themes'
@@ -20,7 +21,8 @@ import { DarkLegacy, LightLegacy } from '@/themes'
 export const useVueTorrentStore = defineStore(
   'vuetorrent',
   () => {
-    const language = ref('en')
+    // 修改1：默认语言改为简体中文 zh-CN
+    const language = ref('zh-CN')
     const theme = reactive({
       mode: ThemeMode.SYSTEM,
       light: LightLegacy.id,
@@ -48,6 +50,11 @@ export const useVueTorrentStore = defineStore(
     const displayGraphLimits = ref(true)
     const useEmojiState = ref(true)
     const fetchExternalIpInfo = ref(false)
+    const reduceMotion = ref(false)
+    const keepDefaultTransitions = computed(() => !reduceMotion.value)
+    const defaultTorrentDetailTab = ref(TorrentDetailTab.LAST_OPENED)
+    const tableColumnWidths = ref<Record<string, Record<string, number>>>({})
+    const logoutUrl = ref('')
 
     const _busyProperties = ref<PropertyData>(JSON.parse(JSON.stringify(propsData)))
     const _doneProperties = ref<PropertyData>(JSON.parse(JSON.stringify(propsData)))
@@ -204,6 +211,24 @@ export const useVueTorrentStore = defineStore(
       })
     }
 
+    function setTableColumnWidth(tableKey: string, columnKey: string, width: number) {
+      if (!tableKey || !columnKey || !Number.isFinite(width) || width <= 0) return
+      if (!tableColumnWidths.value[tableKey]) {
+        tableColumnWidths.value[tableKey] = {}
+      }
+      tableColumnWidths.value[tableKey][columnKey] = width
+    }
+
+    function clearTableColumnWidth(tableKey: string, columnKey: string) {
+      if (!tableKey || !columnKey) return
+      const tableEntry = tableColumnWidths.value[tableKey]
+      if (!tableEntry) return
+      delete tableEntry[columnKey]
+      if (!Object.keys(tableEntry).length) {
+        delete tableColumnWidths.value[tableKey]
+      }
+    }
+
     function toggleBusyProperty(name: DashboardProperty) {
       _busyProperties.value[name].active = !_busyProperties.value[name].active
     }
@@ -258,6 +283,7 @@ export const useVueTorrentStore = defineStore(
       displayGraphLimits,
       useEmojiState,
       fetchExternalIpInfo,
+      tableColumnWidths,
       setLanguage,
       updateTheme,
       toggleTheme,
@@ -267,14 +293,21 @@ export const useVueTorrentStore = defineStore(
       updateBusyGridProperties,
       updateDoneGridProperties,
       updateTableProperties,
+      setTableColumnWidth,
+      clearTableColumnWidth,
       toggleBusyProperty,
       toggleDoneProperty,
       toggleBusyGridProperty,
       toggleDoneGridProperty,
       toggleTableProperty,
       expandContent,
+      reduceMotion,
+      keepDefaultTransitions,
+      defaultTorrentDetailTab,
+      logoutUrl,
       $reset: () => {
-        language.value = 'en'
+        // 修改2：重置界面设置时也默认中文
+        language.value = 'zh-CN'
         theme.mode = ThemeMode.SYSTEM
         theme.light = LightLegacy.id
         theme.dark = DarkLegacy.id
@@ -299,6 +332,10 @@ export const useVueTorrentStore = defineStore(
         useEmojiState.value = true
         fetchExternalIpInfo.value = false
         expandContent.value = true
+        reduceMotion.value = false
+        defaultTorrentDetailTab.value = TorrentDetailTab.LAST_OPENED
+        tableColumnWidths.value = {}
+        logoutUrl.value = ''
 
         _busyProperties.value = JSON.parse(JSON.stringify(propsData))
         _doneProperties.value = JSON.parse(JSON.stringify(propsData))
